@@ -1,51 +1,55 @@
 pipeline {
     agent any
 
-    stages {
-        stage('Estandar de codigo') {
-            steps {
-                sh "
-                cd calculadora
-                echo 'Estandar de codigo'
-                # Activar el entorno virtual
-                . ~/venv/bin/activate
+    environment {
+        VENV_PATH = "${HOME}/venv/bin/activate"
+        TIMESTAMP = sh(script: "date +%Y%m%d%H%M%S", returnStdout: true).trim()
+        BRANCH_NAME = "feature-${TIMESTAMP}"
+    }
 
-                # Ejecutar pruebas de estilo de código
-                flake8 .
-                "
+    stages {
+        stage('Estandar de código') {
+            steps {
+                dir('calculadora') {
+                    sh '''
+                    echo "Estandar de código"
+                    source $VENV_PATH
+                    flake8 .
+                    '''
+                }
             }
         }
+
         stage('Pruebas unitarias') {
             steps {
-                sh """
-                cd calculadora
-                echo 'Pruebas unitarias'
-                # Activar el entorno virtual
-                . ~/venv/bin/activate
-
-                # Ejecutar pruebas unitarias
-                python3 test_calculadora.py
-                """
+                dir('calculadora') {
+                    sh '''
+                    echo "Pruebas unitarias"
+                    source $VENV_PATH
+                    python3 test_calculadora.py
+                    '''
+                }
             }
         }
+
         stage('Realizar pull request') {
             steps {
-                sh """
-                cd calculadora
-                echo 'Realizar pull request'
-                # Activar el entorno virtual
-                . ~/venv/bin/activate
-                # Crear un nuevo branch
-                git checkout -b feature/$(date +%Y%m%d%H%M%S)
-                # Hacer commit de los cambios
-                git add .
-                git commit -m "Cambios realizados en la calculadora"
-                # Hacer push del branch
-                git push origin feature/$(date +%Y%m%d%H%M%S)
-                # Crear un pull request
-                gh pr create --base main --head feature/$(date +%Y%m%d%H%M%S) --title "Cambios realizados en la calculadora" --body "Se han realizado cambios en la calculadora"
-                """
+                dir('calculadora') {
+                    script {
+                        def timestamp = sh(script: "date +%Y%m%d%H%M%S", returnStdout: true).trim()
+                        def branch = "feature/${timestamp}"
 
+                        sh """
+                        echo "Realizar pull request"
+                        source $VENV_PATH
+                        git checkout -b ${branch}
+                        git add .
+                        git commit -m "Cambios realizados en la calculadora"
+                        git push origin ${branch}
+                        gh pr create --base main --head ${branch} --title "Cambios realizados en la calculadora" --body "Se han realizado cambios en la calculadora"
+                        """
+                    }
+                }
             }
         }
     }
