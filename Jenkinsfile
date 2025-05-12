@@ -1,19 +1,13 @@
 pipeline {
     agent any
 
-    environment {
-        VENV_PATH = "${HOME}/venv/bin/activate"
-        TIMESTAMP = sh(script: "date +%Y%m%d%H%M%S", returnStdout: true).trim()
-        BRANCH_NAME = "feature-${TIMESTAMP}"
-    }
-
     stages {
         stage('Estandar de código') {
             steps {
                 dir('calculadora') {
                     sh '''
                     echo "Estandar de código"
-                    source $VENV_PATH
+                    . ~/venv/bin/activate
                     flake8 .
                     '''
                 }
@@ -25,7 +19,7 @@ pipeline {
                 dir('calculadora') {
                     sh '''
                     echo "Pruebas unitarias"
-                    source $VENV_PATH
+                    . ~/venv/bin/activate
                     python3 test_calculadora.py
                     '''
                 }
@@ -41,7 +35,7 @@ pipeline {
 
                         sh """
                         echo "Realizar pull request"
-                        source $VENV_PATH
+                        . ~/venv/bin/activate
                         git checkout -b ${branch}
                         git add .
                         git commit -m "Cambios realizados en la calculadora"
